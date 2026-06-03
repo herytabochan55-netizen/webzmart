@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zmart Baznas Batola</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #fecaca; overflow-x: hidden; }
+        
+        @keyframes flutter {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -50px) rotate(20deg); }
+            50% { transform: translate(200px, 0) rotate(0deg); }
+            75% { transform: translate(100px, 50px) rotate(-20deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .butterfly { position: fixed; font-size: 24px; animation: flutter 10s infinite ease-in-out; z-index: 2; pointer-events: none; }
+
+        @keyframes floatMoney {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+        .money-float { position: fixed; animation: floatMoney infinite ease-in-out; z-index: 0; pointer-events: none; color: rgba(185, 28, 28, 0.2); font-weight: bold; font-size: 24px; }
+
+        @keyframes walk { 0% { transform: translateX(-50px); } 100% { transform: translateX(110vw); } }
+        .ant { position: fixed; bottom: 5px; z-index: 5; pointer-events: none; font-size: 16px; animation: walk linear infinite; }
+
+        @keyframes fadeInOut { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        .toast-show { animation: fadeInOut 2s forwards; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="fixed top-2 left-2 text-4xl opacity-50 z-1">🌸</div>
+    <div class="fixed top-2 right-2 text-4xl opacity-50 z-1">🌺</div>
+    <div class="fixed bottom-2 left-2 text-4xl opacity-50 z-1">🌼</div>
+    <div class="fixed bottom-2 right-2 text-4xl opacity-50 z-1">🌷</div>
+
+    <div class="butterfly" style="top: 20%; left: 10%;">🦋</div>
+    <div class="butterfly" style="top: 50%; right: 10%; animation-delay: 2s;">🦋</div>
+    <div class="butterfly" style="top: 70%; left: 30%; animation-delay: 5s;">🦋</div>
+
+    <div class="money-float" style="left: 5%; animation-duration: 7s; animation-delay: 0s;">Rp</div>
+    <div class="money-float" style="left: 20%; animation-duration: 10s; animation-delay: 2s;">Rp</div>
+    <div class="money-float" style="left: 45%; animation-duration: 8s; animation-delay: 1s;">Rp</div>
+
+    <div class="ant" style="animation-duration: 15s; animation-delay: 0s;">🐜</div>
+    <div class="ant" style="animation-duration: 20s; animation-delay: 5s;">🐜</div>
+
+    <div id="toast" class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full shadow-lg opacity-0 pointer-events-none z-[100] font-bold">
+        Auto-save aktif: Data tersimpan
+    </div>
+
+    <div class="max-w-6xl mx-auto relative z-10">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-red-900">Zmart Baznas Batola</h1>
+            <p class="text-red-950/70 font-medium">Dashboard Monitoring 60 Mustahik</p>
+            <div id="current-date" class="mt-2 text-red-800 font-semibold bg-red-100/80 inline-block px-3 py-1 rounded-full text-sm"></div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white/90 p-6 rounded-2xl shadow-lg border-l-4 border-red-700">
+                <p class="text-slate-500 text-sm">Pendapatan Rata-rata</p>
+                <h2 id="avg-income" class="text-2xl font-bold mt-1 text-red-800">Rp 0</h2>
+            </div>
+            <div class="bg-white/90 p-6 rounded-2xl shadow-lg border-l-4 border-red-700">
+                <p class="text-slate-500 text-sm">Tertinggi</p>
+                <h2 id="max-income" class="text-lg font-bold mt-1 text-slate-800 leading-tight">Rp 0</h2>
+            </div>
+            <div class="bg-white/90 p-6 rounded-2xl shadow-lg border-l-4 border-red-700">
+                <p class="text-slate-500 text-sm">Terendah</p>
+                <h2 id="min-income" class="text-lg font-bold mt-1 text-slate-800 leading-tight">Rp 0</h2>
+            </div>
+        </div>
+
+        <div class="flex justify-end mb-6">
+            <button onclick="exportAllToExcel()" class="bg-red-900 hover:bg-black text-white px-6 py-2 rounded-full font-medium transition shadow-xl">
+                Export Semua (Excel)
+            </button>
+        </div>
+
+        <div id="mustahik-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl">
+            <div class="flex items-center gap-4 mb-4">
+                <img id="edit-photo-preview" src="https://placehold.co/80x80/red/white?text=Foto" class="w-20 h-20 rounded-full object-cover border-2 border-red-100">
+                <div class="flex-1">
+                    <input type="text" id="edit-name" class="text-2xl font-bold border-none w-full focus:outline-none text-red-800" oninput="updateMustahikData()" placeholder="Nama Mustahik">
+                    <input type="text" id="edit-photo-url" class="text-xs text-slate-400 border-none w-full focus:outline-none mt-1" oninput="updateMustahikData()" placeholder="Masukkan Link Foto (URL)">
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">Saldo Bulan Lalu:</span>
+                    <input type="number" id="edit-prev-balance" class="font-bold text-red-700 w-24 text-right" oninput="updateMustahikData()" placeholder="0">
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">Saldo Hari Ini:</span>
+                    <span id="modal-balance" class="font-bold text-red-700">Rp 0</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500 text-sm">Keuntungan Bersih (10%):</span>
+                    <span id="modal-profit" class="font-bold text-green-600 text-lg">Rp 0</span>
+                </div>
+                
+                <div class="space-y-2 mt-4">
+                    <div class="flex gap-2">
+                        <input type="number" id="income-amount" placeholder="Pemasukan (Rp)" class="border p-2 rounded-lg flex-1">
+                        <button onclick="addTransaction('income')" class="bg-green-600 text-white px-4 rounded-lg">➕</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" id="expense-amount" placeholder="Pengeluaran (Rp)" class="border p-2 rounded-lg flex-1">
+                        <button onclick="addTransaction('expense')" class="bg-red-600 text-white px-4 rounded-lg">➖</button>
+                    </div>
+                </div>
+                
+                <div id="transaction-list" class="max-h-40 overflow-y-auto space-y-1 mt-2"></div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="exportIndividualToExcel()" class="flex-1 bg-slate-100 py-2 rounded-xl text-sm">Export Excel</button>
+                <button onclick="closeModal()" class="flex-1 bg-red-600 text-white py-2 rounded-xl text-sm">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const mustahikList = [
+            { name: "Norhayati", origin: "Rantau Badauh" }, { name: "Noor Laila", origin: "Rantau Badauh" }, { name: "Masbiyah", origin: "Rantau Badauh" },
+            { name: "Misnawati", origin: "Rantau Badauh" }, { name: "Nor Hikmah", origin: "Rantau Badauh" }, { name: "Rahmah", origin: "Rantau Badauh" },
+            { name: "Salni", origin: "Rantau Badauh" }, { name: "M. Baihaqi", origin: "Rantau Badauh" }, { name: "Indah Swesti", origin: "Rantau Badauh" },
+            { name: "Siti Aisyah", origin: "Rantau Badauh" }, { name: "Mariani", origin: "Rantau Badauh" }, { name: "Tuti Barokah", origin: "Rantau Badauh" },
+            { name: "Hj. ST. Misbah", origin: "Rantau Badauh" }, { name: "Misriyati", origin: "Rantau Badauh" }, { name: "Puput Aulia", origin: "Rantau Badauh" },
+            { name: "Hariyanto", origin: "Mandastana" }, { name: "Lilis Turiani", origin: "Mandastana" }, { name: "Rusmiyati", origin: "Mandastana" },
+            { name: "Iqbal Muntesa", origin: "Mandastana" }, { name: "Syaiful", origin: "Alalak" }, { name: "Rahmawati", origin: "Alalak" },
+            { name: "Maria", origin: "Alalak" }, { name: "Misdah", origin: "Marabahan" }, { name: "Dina Amalia Fitri", origin: "Marabahan" },
+            { name: "Noraida", origin: "Cerbon" }, { name: "Megawati", origin: "Cerbon" }, { name: "Riska Jannah", origin: "Cerbon" },
+            { name: "Rahmawati", origin: "Cerbon" }, { name: "Siti Nor Fitriani", origin: "Cerbon" }, { name: "Suaibatul Aslamiyah", origin: "Cerbon" },
+            { name: "Syarifullah", origin: "Marabahan" }, { name: "Asiah", origin: "Tabukan" }, { name: "Reni Winahyu", origin: "Tabukan" },
+            { name: "M.Ikhsan Fauzi", origin: "Barambai" }, { name: "Misran", origin: "Marabahan" }, { name: "Letti Sia", origin: "Marabahan" },
+            { name: "Aida", origin: "Marabahan" }, { name: "Rudi Sanjaya", origin: "Cerbon" }, { name: "Dewi", origin: "Cerbon" },
+            { name: "Halimah", origin: "Bakumpai" }, { name: "Maimunah", origin: "Tabukan" }, { name: "Jumiati", origin: "Barambai" },
+            { name: "Nupriana", origin: "Rantau Badauh" }, { name: "Erniawati", origin: "Marabahan" }, { name: "Rini", origin: "Marabahan" },
+            { name: "Nor Halimah", origin: "Marabahan" }, { name: "Hasanah", origin: "Marabahan" }, { name: "Wahyu Gumlar", origin: "Bakumpai" },
+            { name: "Eka Novia Rina", origin: "Bakumpai" }, { name: "Jamaluddin", origin: "Bakumpai" }
+        ];
+
+        let mustahiks = JSON.parse(localStorage.getItem('zmart_data')) || mustahikList.map((m, i) => ({
+            id: i + 1, name: m.name, origin: m.origin, initialBalance: 0, transactions: [], photo: ''
+        }));
+
+        let activeId = null;
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('toast-show');
+            setTimeout(() => toast.classList.remove('toast-show'), 2000);
+        }
+
+        function saveData() {
+            localStorage.setItem('zmart_data', JSON.stringify(mustahiks));
+            updateUI();
+            showToast();
+        }
+
+        function updateMustahikData() {
+            const m = mustahiks.find(x => x.id === activeId);
+            m.name = document.getElementById('edit-name').value;
+            m.photo = document.getElementById('edit-photo-url').value;
+            m.previousBalance = parseInt(document.getElementById('edit-prev-balance').value) || 0;
+            document.getElementById('edit-photo-preview').src = m.photo || 'https://placehold.co/80x80/red/white?text=Foto';
+            
+            // Perbarui tampilan real-time di dalam modal
+            const met = calculateMetrics(m);
+            document.getElementById('modal-balance').innerText = `Rp ${met.bal.toLocaleString()}`;
+            
+            saveData();
+        }
+
+        function updateUI() {
+            const grid = document.getElementById('mustahik-grid');
+            grid.innerHTML = mustahiks.map(m => {
+                const met = calculateMetrics(m);
+                return `
+                    <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-red-100 hover:shadow-md transition">
+                        <div class="flex items-center gap-3">
+                            <img src="${m.photo || 'https://placehold.co/50x50/red/white?text=Foto'}" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <h3 class="font-bold text-slate-800">${m.name}</h3>
+                                <p class="text-xs text-red-500 font-medium">${m.origin}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-xs space-y-1">
+                            <p class="text-slate-500">Saldo: <span class="font-semibold text-red-600">Rp ${met.bal.toLocaleString()}</span></p>
+                            <p class="text-green-600 font-semibold">Keuntungan: Rp ${Math.round(met.profit).toLocaleString()}</p>
+                        </div>
+                        <button onclick="openModal(${m.id})" class="mt-3 w-full bg-purple-100 text-purple-700 py-2 rounded-lg font-medium text-sm">Edit Data</button>
+                    </div>
+                `;
+            }).join('');
+            
+            const totalIncomes = mustahiks.map(m => calculateMetrics(m).inc);
+            const avg = totalIncomes.reduce((a,b)=>a+b, 0) / mustahiks.length;
+            const maxVal = Math.max(...totalIncomes);
+            const minVal = Math.min(...totalIncomes);
+            const maxIdx = totalIncomes.indexOf(maxVal);
+            const minIdx = totalIncomes.indexOf(minVal);
+
+            document.getElementById('avg-income').innerText = `Rp ${Math.round(avg).toLocaleString()}`;
+            document.getElementById('max-income').innerHTML = `<span class="block text-xs text-red-400">${mustahiks[maxIdx].name}</span>Rp ${maxVal.toLocaleString()}`;
+            document.getElementById('min-income').innerHTML = `<span class="block text-xs text-red-400">${mustahiks[minIdx].name}</span>Rp ${minVal.toLocaleString()}`;
+        }
+
+        function addTransaction(type) {
+            const m = mustahiks.find(x => x.id === activeId);
+            const amountInput = document.getElementById(type === 'income' ? 'income-amount' : 'expense-amount');
+            const amount = parseInt(amountInput.value);
+            if (isNaN(amount) || amount <= 0) return;
+            
+            const now = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+            m.transactions.push({ amount, type, date: now });
+            
+            renderTransactions();
+            const met = calculateMetrics(m);
+            document.getElementById('modal-balance').innerText = `Rp ${met.bal.toLocaleString()}`;
+            document.getElementById('modal-profit').innerText = `Rp ${Math.round(met.profit).toLocaleString()}`;
+            amountInput.value = '';
+
+            const waLink = `https://wa.me/6282197057736?text=Halo, ada transaksi baru untuk ${m.name}: ${type.toUpperCase()} sebesar Rp ${amount.toLocaleString()}. Saldo sekarang: Rp ${met.bal.toLocaleString()}.`;
+            window.open(waLink, '_blank');
+
+            saveData();
+        }
+
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        
+        function calculateMetrics(m) {
+            const inc = m.transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+            const exp = m.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+            return { inc, exp, bal: (m.previousBalance || 0) + inc - exp, profit: inc * 0.1 };
+        }
+        function openModal(id) {
+            activeId = id;
+            const m = mustahiks.find(x => x.id === id);
+            const met = calculateMetrics(m);
+            document.getElementById('edit-name').value = m.name;
+            document.getElementById('edit-prev-balance').value = m.previousBalance || 0;
+            document.getElementById('edit-photo-url').value = m.photo || '';
+            document.getElementById('edit-photo-preview').src = m.photo || 'https://placehold.co/80x80/red/white?text=Foto';
+            document.getElementById('modal-balance').innerText = `Rp ${met.bal.toLocaleString()}`;
+            document.getElementById('modal-profit').innerText = `Rp ${Math.round(met.profit).toLocaleString()}`;
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+            renderTransactions();
+        }
+        function renderTransactions() {
+            const m = mustahiks.find(x => x.id === activeId);
+            document.getElementById('transaction-list').innerHTML = m.transactions.map(t => `
+                <div class="flex justify-between text-xs p-1 border-b">
+                    <span class="text-slate-400">${t.date}</span>
+                    <span class="${t.type === 'income' ? 'text-green-600' : 'text-red-600'}">${t.type}</span>
+                    <span class="font-bold">Rp ${t.amount.toLocaleString()}</span>
+                </div>
+            `).join('');
+        }
+        function exportAllToExcel() {
+            let csv = "Nama,Saldo,Keuntungan 10%\n" + mustahiks.map(m => {
+                const met = calculateMetrics(m);
+                return `${m.name},${met.bal},${Math.round(met.profit)}`;
+            }).join("\n");
+            const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURI(csv); a.download = 'Data_Mustahik.csv'; a.click();
+        }
+        function exportIndividualToExcel() {
+            const m = mustahiks.find(x => x.id === activeId);
+            let csv = "Tanggal,Tipe,Jumlah\n" + m.transactions.map(t => `${t.date},${t.type},${t.amount}`).join("\n");
+            const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURI(csv); a.download = `${m.name}_Laporan.csv`; a.click();
+        }
+        window.onload = () => { updateUI(); updateDateDisplay(); };
+        function updateDateDisplay() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', options);
+        }
+    </script>
+</body>
+</html>
